@@ -145,10 +145,11 @@ FORCE_ADD: dict[str, str] = {
 #: Fixtures whose verdict depends on machine-local state; run with an isolated HOME and store.
 NEEDS_ISOLATED_ENV = frozenset({"idx-01-no-mcp-config", "idx-02-no-index"})
 
-#: Fixtures that are not the whole matrix: the empty directory has its own structural test.
-NOT_IN_MATRIX = {
-    "empty": "empty directory: exercised by test_empty_directory_reports_nothing_and_does_not_crash",
-}
+#: Fixtures that are not part of the check matrix and are exercised by their own structural test.
+#: Currently empty: git cannot store an empty directory, so the empty-repository case is built at
+#: runtime by ``test_empty_directory_reports_nothing_and_does_not_crash``. Add a name here only
+#: alongside a dedicated test.
+NOT_IN_MATRIX: dict[str, str] = {}
 
 #: Positive fixtures whose union must cover every scoreable check. ``tst-03``/``tst-05`` are not
 #: "ok" fixtures but are the only checked-in fixtures where TST-03/TST-04 pass, so they complete
@@ -222,7 +223,10 @@ class FixtureMatrixTests(unittest.TestCase):
         # must satisfy by *presence* fail; the checks that could only be satisfied by a repository
         # that does not exist (single-root coverage, no competitors) pass vacuously — that is the
         # documented behaviour, not a pass by omission (Scan Engine §9; AGENTS.md §10.4).
-        report = support.run_audit(support.fixture("empty"))
+        # Built at runtime: git cannot store an empty directory, so a checked-in fixture would not
+        # survive a clean clone.
+        with tempfile.TemporaryDirectory() as tmp:
+            report = support.run_audit(Path(tmp))
         verdicts = support.verdicts(report)
         self.assertEqual(set(verdicts), {spec.id for spec in REGISTRY},
                          "the empty scan dropped or added checks")

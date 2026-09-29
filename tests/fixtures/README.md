@@ -88,9 +88,11 @@ fixtures/
   hyg-01-placeholder-readme/ README is a TODO stub                      -> HYG-01 FAIL
   hyg-10-no-license/         real README, no LICENSE at the root         -> HYG-10 FAIL
   hyg-minimal/               no hygiene artifacts at all                 -> HYG-01…10 FAIL, HYG-11 UNKNOWN
-  empty/                     empty directory                      -> no crash, every check reports; only vacuous absence-of-defect passes
   governed-minimal/          the smallest repository that passes every implemented AGT content check, plus its cross-pack neighbours exercised by the matrix test
 ```
+
+An empty directory cannot be checked in — git does not track them — so the empty-repository case is
+built at runtime by `test_empty_directory_reports_nothing_and_does_not_crash`.
 
 Two rules for a fixture:
 
