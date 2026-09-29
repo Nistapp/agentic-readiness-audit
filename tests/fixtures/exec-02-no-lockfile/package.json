@@ -1,0 +1,8 @@
+{
+  "name": "exec-02",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}

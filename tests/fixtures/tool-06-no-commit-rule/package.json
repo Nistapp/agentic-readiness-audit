@@ -1,0 +1,10 @@
+{
+  "name": "tool-06-no-commit-rule",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "security": "npm audit --audit-level=high"
+  }
+}

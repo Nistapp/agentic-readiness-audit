@@ -1,0 +1,8 @@
+{
+  "name": "tst-01-no-suite",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:coverage": "vitest run --coverage"
+  }
+}

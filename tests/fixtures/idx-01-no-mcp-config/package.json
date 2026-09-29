@@ -1,0 +1,8 @@
+{
+  "name": "idx-01-no-mcp-config",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "echo \"no tests\" && exit 0"
+  }
+}

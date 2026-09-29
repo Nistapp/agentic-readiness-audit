@@ -1,0 +1,9 @@
+{
+  "name": "base-04-no-coverage-floor",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "eslint . --max-warnings 5",
+    "test": "vitest run"
+  }
+}

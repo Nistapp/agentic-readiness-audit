@@ -1,0 +1,10 @@
+{
+  "name": "tool-02-no-linter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write .",
+    "security": "npm audit --audit-level=high",
+    "prepare": "husky"
+  }
+}

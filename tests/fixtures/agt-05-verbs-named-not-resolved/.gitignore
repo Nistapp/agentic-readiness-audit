@@ -1,0 +1,13 @@
+# Secret shapes — keeps SEC-03 satisfied so the fixture isolates AGT-05.
+.env
+.env.*
+id_rsa*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+.aws/*
+node_modules/

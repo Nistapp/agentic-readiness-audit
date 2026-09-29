@@ -1,0 +1,15 @@
+# Comprehensive secret-shape coverage, so SEC-01 and SEC-03 pass.
+.env
+.env.*
+id_rsa*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.crt
+*.cer
+.aws/*
+
+# Dependencies
+node_modules/

@@ -1,0 +1,2 @@
+This scratch note is the only file under docs/. It is deliberately not markdown, so DOC-01 sees a
+docs/ directory with no markdown page in it.

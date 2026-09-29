@@ -1,0 +1,2 @@
+# Thin ignore rules: only dependencies, no secret shapes.
+node_modules/

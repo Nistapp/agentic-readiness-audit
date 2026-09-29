@@ -1,0 +1,36 @@
+# build output — the source tree is the artifact of record
+/dist/
+*.pyz
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# virtualenvs and packaging scratch (this project has no install step)
+/.venv/
+/venv/
+/build/
+*.egg-info/
+
+# reports produced by running the audit
+/audit-report.json
+/audit-report.md
+
+# probe and scan scratch
+/.audit-cache/
+
+# agent scratchpad: exploratory, unverified, superseded notes — never a source of truth
+# root-scoped so fixture directories that deliberately use these names are still committed
+/artefacts/
+/artifacts/
+
+# environment files (secrets never committed; templates are)
+/.env
+/.env.*
+!/.env.example
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp

@@ -1,0 +1,8 @@
+{
+  "name": "base-01-no-baseline",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run"
+  }
+}

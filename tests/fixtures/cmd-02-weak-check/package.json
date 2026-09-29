@@ -1,0 +1,17 @@
+{
+  "name": "cmd-02-weak-check",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run lint",
+    "security": "npm audit --audit-level=high"
+  }
+}

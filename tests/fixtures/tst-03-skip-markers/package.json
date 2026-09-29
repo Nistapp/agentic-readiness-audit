@@ -1,0 +1,9 @@
+{
+  "name": "tst-03-skip-markers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "cmd-04-write-in-check",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run format && npm run format:check && npm run typecheck && npm test",
+    "security": "npm audit --audit-level=high"
+  }
+}

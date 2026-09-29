@@ -1,0 +1,11 @@
+{
+  "name": "tool-03-nonstrict-ts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "security": "npm audit --audit-level=high",
+    "prepare": "husky"
+  }
+}
