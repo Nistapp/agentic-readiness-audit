@@ -84,12 +84,12 @@ class CheckSpec:
         if self.status == "blocked":
             return CheckOutcome(self.id, self.title, self.tier, self.severity, self.phase,
                                 Verdict.UNKNOWN, self.status,
-                                detail="blocked: the framework defines no artifact contract for this "
-                                       "deliverable, so it carries weight 0 in v1 (see CON-01)")
+                                summary="blocked: the framework defines no artifact contract for this "
+                                        "deliverable, so it carries weight 0 in v1 (see CON-01)")
         if self.impl is None:
             return CheckOutcome(self.id, self.title, self.tier, self.severity, self.phase,
                                 Verdict.UNKNOWN, self.status,
-                                detail=f"not implemented in ruleset {_revision()}")
+                                summary=f"not implemented in ruleset {_revision()}")
         return self.impl(spec=self, **kwargs)
 
 

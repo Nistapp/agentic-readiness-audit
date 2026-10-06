@@ -44,6 +44,7 @@ from audit.findings import Evidence, Finding, Verdict, statement
 from audit.probes import MUTATING_VERBS
 from audit.rules.checks._common import resolve_verbs, runner_commands
 from audit.stack import CI_PROVIDERS, VERBS
+from audit.rules.payloads import Payload
 
 #: The read-only verbs a CI pipeline may be expected to exercise (everything but a write verb).
 READ_ONLY_VERBS: tuple[str, ...] = tuple(v for v in VERBS if v not in MUTATING_VERBS)
@@ -115,10 +116,11 @@ _PM_BUILTINS: frozenset[str] = frozenset({
 })
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:

@@ -34,6 +34,7 @@ import re
 from audit.evaluate import CheckOutcome
 from audit.findings import Evidence, Finding, Verdict, statement
 from audit.scan import Inventory, Kind
+from audit.rules.payloads import Payload, Ratio
 
 #: Files larger than this are counted as oversized (NAV-03). Documented, not tuned.
 LARGE_FILE_BYTES = 512 * 1024
@@ -42,10 +43,11 @@ LARGE_FILE_BYTES = 512 * 1024
 CATCH_ALL_FILES = 50
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:
@@ -388,7 +390,9 @@ def check_nav05(*, spec, target, inventory, stack, components, session) -> Check
     ratio = documented / total
     detail = f"{documented}/{total} public symbols documented ({ratio:.0%}); method: {method}"
     verdict = Verdict.PASS if documented == total else Verdict.PARTIAL
-    return _outcome(spec, verdict, detail)
+    return _outcome(spec, verdict, detail,
+                    data=Ratio(numerator=documented, denominator=total,
+                               unit="public symbols", method=method))
 
 
 IMPLEMENTATIONS = {

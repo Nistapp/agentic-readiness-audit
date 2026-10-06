@@ -31,6 +31,13 @@ from audit.rules.checks._common import resolve_verbs, runner_commands
 from audit.scan import Inventory
 from audit.stack import VERBS
 from audit.rules import variants as V
+from audit.rules.payloads import (
+    HarnessMatrix,
+    Payload,
+    Ratio,
+    VerbEntry,
+    VerbSurface,
+)
 
 #: An instruction file below this size, or matching a stub marker, is present but not governance.
 MIN_INSTRUCTION_CHARS = 400
@@ -182,7 +189,7 @@ def check_agt01(*, spec, target, inventory, stack, components, session) -> Check
         verdict = Verdict.FAIL if any(f.verdict is Verdict.FAIL for f in findings) else Verdict.PARTIAL
 
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail="; ".join(detail_parts), findings=findings)
+                        spec.status, summary="; ".join(detail_parts), findings=findings)
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +201,7 @@ def check_agt02(*, spec, target, inventory, stack, components, session) -> Check
     if not members:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail="single-root repository: no component-level instruction files "
+                            summary="single-root repository: no component-level instruction files "
                                    "required")
 
     covered: list[str] = []
@@ -222,7 +229,9 @@ def check_agt02(*, spec, target, inventory, stack, components, session) -> Check
         ))
     verdict = Verdict.PASS if ratio == 1.0 else (Verdict.FAIL if ratio == 0 else Verdict.PARTIAL)
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=f"coverage {len(covered)}/{len(members)}",
+                        spec.status, summary=f"coverage {len(covered)}/{len(members)}",
+                        data=Ratio(numerator=len(covered), denominator=len(members),
+                                   unit="components", method="declared AGENTS.md per component"),
                         findings=findings)
 
 
@@ -277,7 +286,10 @@ def check_agt08(*, spec, target, inventory, stack, components, session) -> Check
         Verdict.PARTIAL if findings else Verdict.PASS)
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
                         spec.status,
-                        detail=f"{len(reached)}/{len(reached) + len(missed)} harnesses reached",
+                        summary=f"{len(reached)}/{len(reached) + len(missed)} harnesses reached",
+                        data=HarnessMatrix(reached=len(reached), total=len(reached) + len(missed),
+                                           reached_tools=tuple(sorted(reached)),
+                                           unreached_tools=tuple(sorted(missed))),
                         findings=findings)
 
 
@@ -405,7 +417,7 @@ def check_agt10(*, spec, target, inventory, stack, components, session) -> Check
 
     verdict = Verdict.FAIL if findings else Verdict.PASS
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail="; ".join(detail), findings=findings)
+                        spec.status, summary="; ".join(detail), findings=findings)
 
 
 def _broken_pointer(spec, config_file: str, name: str) -> Finding:
@@ -434,7 +446,7 @@ def _entry(inventory: Inventory) -> tuple[str, str]:
 
 def _unknown(spec, reason: str) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
-                        Verdict.UNKNOWN, spec.status, detail=reason)
+                        Verdict.UNKNOWN, spec.status, summary=reason)
 
 
 def _first_line(text: str, pattern: re.Pattern) -> int | None:
@@ -467,13 +479,13 @@ def check_agt03(*, spec, target, inventory, stack, components, session) -> Check
     if not missing:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail="docs/, the style guide and the scratch contract are named")
+                            summary="docs/, the style guide and the scratch contract are named")
 
     covered = {label: line for label, line in wanted.items() if line is not None}
     verdict = Verdict.PARTIAL if covered else Verdict.FAIL
     return CheckOutcome(
         spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict, spec.status,
-        detail=f"does not name {', '.join(missing)}",
+        summary=f"does not name {', '.join(missing)}",
         findings=[Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=verdict,
             statement=statement(
@@ -515,7 +527,7 @@ def check_agt04(*, spec, target, inventory, stack, components, session) -> Check
     if tied_line:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail="definition of done ties a doc trigger to the same change set")
+                            summary="definition of done ties a doc trigger to the same change set")
 
     if change_line:
         why = ("the same-change-set rule is stated but names no documentation trigger (public "
@@ -524,7 +536,7 @@ def check_agt04(*, spec, target, inventory, stack, components, session) -> Check
         why = "no definition-of-done sentence ties a documentation trigger to the same change set"
     return CheckOutcome(
         spec.id, spec.title, spec.tier, spec.severity, spec.phase, Verdict.FAIL, spec.status,
-        detail=why,
+        summary=why,
         findings=[Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=Verdict.FAIL,
             statement=statement("keep code and its documentation in step", why),
@@ -553,6 +565,22 @@ def _mentioned_verbs(text: str) -> set[str]:
     return found
 
 
+def _verb_binding_surface(resolved: dict) -> VerbSurface:
+    return VerbSurface(
+        verbs=tuple(
+            VerbEntry(
+                verb=v,
+                resolved=v in resolved,
+                runner=resolved[v].runner if v in resolved else None,
+                command=resolved[v].command if v in resolved else None,
+            )
+            for v in VERBS
+        ),
+        resolved_count=len(resolved),
+        missing=tuple(v for v in VERBS if v not in resolved),
+    )
+
+
 def check_agt05(*, spec, target, inventory, stack, components, session) -> CheckOutcome:
     name, text = _entry(inventory)
     named = _mentioned_verbs(text)
@@ -566,7 +594,8 @@ def check_agt05(*, spec, target, inventory, stack, components, session) -> Check
         if names_complete:
             return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                                 Verdict.PARTIAL, spec.status,
-                                detail=f"all {len(VERBS)} verbs named, but no runner defines them",
+                                summary=f"all {len(VERBS)} verbs named, but no runner defines them",
+                                data=_verb_binding_surface({}),
                                 findings=[Finding(
                                     check=spec.id, severity=Severity.DEGRADER, phase=spec.phase,
                                     verdict=Verdict.PARTIAL,
@@ -587,8 +616,9 @@ def check_agt05(*, spec, target, inventory, stack, components, session) -> Check
     if names_complete and resolves_complete:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail=f"all {len(VERBS)} verbs named in {name or 'the entry file'} "
-                                   f"and resolved on a runner")
+                            summary=f"all {len(VERBS)} verbs named in {name or 'the entry file'} "
+                                   f"and resolved on a runner",
+                            data=_verb_binding_surface(resolved))
 
     verdict = Verdict.PARTIAL if (names_complete or resolves_complete) else Verdict.FAIL
     because = []
@@ -597,7 +627,8 @@ def check_agt05(*, spec, target, inventory, stack, components, session) -> Check
     if missing_resolution:
         because.append(f"not resolved: {', '.join(missing_resolution)}")
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail="; ".join(because),
+                        spec.status, summary="; ".join(because),
+                        data=_verb_binding_surface(resolved),
                         findings=[Finding(
                             check=spec.id, severity=spec.severity, phase=spec.phase,
                             verdict=verdict,
@@ -648,14 +679,14 @@ def check_agt06(*, spec, target, inventory, stack, components, session) -> Check
     if count >= 2:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail=f"{count} boundary rules reference real paths")
+                            summary=f"{count} boundary rules reference real paths")
 
     verdict = Verdict.PARTIAL if count == 1 else Verdict.FAIL
     why = (f"only {count} boundary rule references a path that exists in this repository"
            if count else "no boundary rule references a path that exists in this repository")
     return CheckOutcome(
         spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict, spec.status,
-        detail=why,
+        summary=why,
         findings=[Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=verdict,
             statement=statement("learn where code may live and what may cross a boundary", why),
@@ -704,7 +735,7 @@ def check_agt07(*, spec, target, inventory, stack, components, session) -> Check
     if not _has_prohibition_section(text):
         return CheckOutcome(
             spec.id, spec.title, spec.tier, spec.severity, spec.phase, Verdict.FAIL, spec.status,
-            detail="no prohibitions section",
+            summary="no prohibitions section",
             findings=[Finding(
                 check=spec.id, severity=spec.severity, phase=spec.phase, verdict=Verdict.FAIL,
                 statement=statement("rely on an explicit do-not list",
@@ -725,13 +756,13 @@ def check_agt07(*, spec, target, inventory, stack, components, session) -> Check
     if not missing:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail="prohibitions cover tests, generated files, the default branch "
+                            summary="prohibitions cover tests, generated files, the default branch "
                                    "and secrets")
 
     verdict = Verdict.PARTIAL if covered else Verdict.FAIL
     return CheckOutcome(
         spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict, spec.status,
-        detail=f"not covered: {', '.join(missing)}",
+        summary=f"not covered: {', '.join(missing)}",
         findings=[Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=verdict,
             statement=statement(
@@ -764,7 +795,7 @@ def check_agt09(*, spec, target, inventory, stack, components, session) -> Check
     if branch_line and release_line:
         return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase,
                             Verdict.PASS, spec.status,
-                            detail="the branch model and the release boundary are stated")
+                            summary="the branch model and the release boundary are stated")
     if branch_line:
         verdict = Verdict.PARTIAL
         why = "the branch model is stated but nothing says whether an agent may tag or release"
@@ -779,7 +810,7 @@ def check_agt09(*, spec, target, inventory, stack, components, session) -> Check
                 for line in (branch_line, release_line) if line]
     return CheckOutcome(
         spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict, spec.status,
-        detail=why,
+        summary=why,
         findings=[Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=verdict,
             statement=statement("know which branch to work on and whether it may cut a release", why),

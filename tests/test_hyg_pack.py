@@ -53,13 +53,13 @@ class HygFixtureTests(unittest.TestCase):
         report = support.run_audit(support.fixture("hyg-01-placeholder-readme"))
         check = next(c for c in report["checks"] if c["id"] == "HYG-01")
         self.assertEqual(check["verdict"], "FAIL")
-        self.assertIn("placeholder", check["detail"])
+        self.assertIn("placeholder", check["summary"])
 
     def test_missing_license_names_the_root(self):
         report = support.run_audit(support.fixture("hyg-10-no-license"))
         check = next(c for c in report["checks"] if c["id"] == "HYG-10")
         self.assertEqual(check["verdict"], "FAIL")
-        self.assertIn("license", check["detail"].lower())
+        self.assertIn("license", check["summary"].lower())
 
     def test_branch_protection_is_unknown_without_a_recognised_provider(self):
         report = support.run_audit(support.fixture("hyg-minimal"))

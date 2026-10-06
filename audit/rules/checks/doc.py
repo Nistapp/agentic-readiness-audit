@@ -36,6 +36,7 @@ from audit.findings import Evidence, Finding, Verdict, statement
 from audit.ignore import load_ignore_rules, tracked_files
 from audit.scan import Inventory
 from audit.target import Target
+from audit.rules.payloads import Payload
 
 STYLE_GUIDE = "docs/STYLE_GUIDE.md"
 
@@ -48,10 +49,11 @@ _ADR_DIRS: tuple[str, ...] = ("docs/architecture/adrs", "docs/adr")
 _ADR_FILE_RE = re.compile(r"^\d{3,4}-[A-Za-z0-9._-]+\.md$")
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _instruction_text(inventory: Inventory) -> tuple[str, str]:

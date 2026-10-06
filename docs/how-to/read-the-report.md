@@ -23,15 +23,22 @@ report about a different repository.
 
 ### Step 2: Read the blockers, and stop there
 
-The Markdown report orders findings by severity first, then by the failing check's weight. Blockers are the only
-section that requires action before onboarding an agent; degraders can be scheduled, cosmetics can be ignored
-indefinitely.
+The Markdown report opens with a **Provenance** table, a **Scorecard** (verdict distribution and
+findings by severity), the **Unattested** list, then one **findings table per severity**. Each finding
+row carries the check id, its title, the verdict, the concrete specifics, the evidence (`path:line`),
+and the fix. Blockers are the only section that requires action before onboarding an agent; degraders
+can be scheduled, cosmetics can be ignored indefinitely.
 
 | Severity | What to do |
 |---|---|
 | **BLOCKER** | Fix before any agent work. These are the findings that make agent output unverifiable or the repository unsafe to touch. |
 | **DEGRADER** | Schedule. Each one costs accuracy or tokens on every task. |
 | **COSMETIC** | Note and move on. |
+
+The full **Appendix — full check results** table lists every applicable check, including the `PASS`
+and `UNKNOWN` rows the findings tables omit. The Markdown is rendered from the JSON report, so the two
+always describe the same run and the Markdown can be re-rendered from a saved `audit-report.json`
+(ADR-0007).
 
 ### Step 3: Read the unattested list
 

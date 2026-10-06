@@ -50,12 +50,14 @@ from audit.ignore import tracked_files
 from audit.rules.checks._common import extract_fenced_commands, resolve_verbs
 from audit.scan import Inventory, Kind
 from audit.stack import PACKAGE_MANAGERS, extract_npm_scripts, parse_makefile_targets
+from audit.rules.payloads import EnvKeys, Payload
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:
@@ -635,11 +637,13 @@ def check_exec04(*, spec, target, inventory, stack, components, session) -> Chec
     referenced = _referenced_env_keys(inventory)
     declared, files = _declared_env_keys(inventory)
     missing = sorted(k for k in referenced - declared if not _env_allowed(k))
+    keys = EnvKeys(referenced=tuple(sorted(referenced)), missing=tuple(missing),
+                   templates=tuple(files))
 
     if not missing:
         detail = (f"{len(referenced)} referenced key(s) declared"
                   if referenced else "no environment keys referenced")
-        return _outcome(spec, Verdict.PASS, detail)
+        return _outcome(spec, Verdict.PASS, detail, data=keys)
 
     because = (f"{len(missing)} referenced key(s) are absent from "
                f"{', '.join(files) if files else 'any committed example file'}: "
@@ -649,7 +653,7 @@ def check_exec04(*, spec, target, inventory, stack, components, session) -> Chec
         statement=statement("know every variable the code needs before running it", because),
         evidence=[Evidence(f) for f in files] or [Evidence("(no example file)")],
         remediation="Add the missing keys to .env.example (values redacted) so the environment "
-                    "can be provisioned without reading the source.")])
+                    "can be provisioned without reading the source.")], data=keys)
 
 
 # ===========================================================================

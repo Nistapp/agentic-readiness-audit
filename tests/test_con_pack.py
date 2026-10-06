@@ -69,7 +69,7 @@ class Con02Tests(unittest.TestCase):
         report = self._scan({".gitignore": "tests/\nnode_modules/\n"})
         check = next(c for c in report["checks"] if c["id"] == "CON-02")
         self.assertEqual(check["verdict"], "PARTIAL")
-        self.assertIn("ignore rules", check["detail"])
+        self.assertIn("ignore rules", check["summary"])
 
     def test_no_protection_at_all_is_unknown_never_pass(self):
         report = self._scan({"app.py": "print(1)\n"})
@@ -148,7 +148,7 @@ class Con04EmitterTests(unittest.TestCase):
             report = json.loads(out.read_text(encoding="utf-8"))
             check = next(c for c in report["checks"] if c["id"] == "CON-04")
             self.assertEqual(check["verdict"], "PASS")
-            self.assertIn(str(draft), check["detail"])
+            self.assertIn(str(draft), check["summary"])
 
     def test_emitter_is_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp:

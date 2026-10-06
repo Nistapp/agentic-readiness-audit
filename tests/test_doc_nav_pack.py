@@ -60,27 +60,27 @@ class DocNavFixtureTests(unittest.TestCase):
         report = support.run_audit(support.fixture("doc-01-empty"))
         check = next(c for c in report["checks"] if c["id"] == "DOC-01")
         self.assertEqual(check["verdict"], "PARTIAL")
-        self.assertIn("no markdown", check["detail"])
+        self.assertIn("no markdown", check["summary"])
 
     def test_doc_04_unindexed_names_the_missing_index(self):
         report = support.run_audit(support.fixture("doc-04-adr-unindexed"))
         check = next(c for c in report["checks"] if c["id"] == "DOC-04")
         self.assertEqual(check["verdict"], "PARTIAL")
-        self.assertIn("no index", check["detail"])
+        self.assertIn("no index", check["summary"])
 
     def test_nav_03_reports_the_counts_and_never_fails(self):
         report = support.run_audit(support.fixture("nav-03-red-flags"))
         check = next(c for c in report["checks"] if c["id"] == "NAV-03")
         self.assertEqual(check["verdict"], "PARTIAL")
         for label in ("oversized", "catch-all", "binaries", "minified"):
-            self.assertIn(label, check["detail"])
+            self.assertIn(label, check["summary"])
 
     def test_nav_05_informational_is_reported_without_crashing(self):
         report = support.run_audit(support.fixture("nav-01-no-manifest"))
         verdicts = support.verdicts(report)
         self.assertIn(verdicts["NAV-05"], ("PASS", "PARTIAL", "FAIL", "UNKNOWN"))
         check = next(c for c in report["checks"] if c["id"] == "NAV-05")
-        self.assertIn("method", check["detail"])
+        self.assertTrue("method" in check["summary"] or check["data"].get("method"))
 
 
 class Doc03TrackedStateTests(unittest.TestCase):

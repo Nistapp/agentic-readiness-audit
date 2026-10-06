@@ -107,7 +107,7 @@ class Sec02ReportHygieneTests(unittest.TestCase):
         report = support.run_audit(self._prepare("sec-02-key-shaped", git=False))
         check = next(c for c in report["checks"] if c["id"] == "SEC-02")
         self.assertEqual(check["verdict"], "FAIL")
-        self.assertIn("tracked state unavailable", check["detail"])
+        self.assertIn("tracked state unavailable", check["data"]["source"])
 
 
 class Sec03CoverageTests(unittest.TestCase):
@@ -115,13 +115,15 @@ class Sec03CoverageTests(unittest.TestCase):
         report = support.run_audit(support.fixture("sec-03-thin-ignore"))
         check = next(c for c in report["checks"] if c["id"] == "SEC-03")
         self.assertEqual(check["verdict"], "FAIL")
-        self.assertIn("missing:", check["detail"])
+        self.assertEqual(check["data"]["kind"], "secret_shapes")
+        self.assertTrue(check["data"]["missing"], "no missing shapes were named")
 
     def test_comprehensive_ignore_passes_with_coverage_named(self):
         report = support.run_audit(support.fixture("sec-01-ok"))
         check = next(c for c in report["checks"] if c["id"] == "SEC-03")
         self.assertEqual(check["verdict"], "PASS")
-        self.assertIn("covered:", check["detail"])
+        self.assertEqual(check["data"]["missing"], [])
+        self.assertTrue(check["data"]["covered"], "no covered shapes were named")
 
 
 if __name__ == "__main__":

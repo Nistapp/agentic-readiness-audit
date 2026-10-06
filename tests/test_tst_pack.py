@@ -50,8 +50,10 @@ class TstFixtureTests(unittest.TestCase):
         verdicts = support.verdicts(report)
         self.assertEqual(verdicts["TST-03"], "PASS")
 
-        detail = next(c["detail"] for c in report["checks"] if c["id"] == "TST-03")
-        self.assertIn("total 3", detail, f"census did not count the markers: {detail}")
+        check = next(c for c in report["checks"] if c["id"] == "TST-03")
+        self.assertEqual(check["data"]["kind"], "counter")
+        self.assertEqual(check["data"]["value"], 3,
+                         f"census did not count the markers: {check['data']}")
 
 
 class TstInlineTests(unittest.TestCase):

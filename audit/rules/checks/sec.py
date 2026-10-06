@@ -38,6 +38,13 @@ from audit.findings import Evidence, Finding, Verdict, statement
 from audit.ignore import IgnoreRule, load_ignore_rules, tracked_files
 from audit.probes import REDACTION_PATTERNS
 from audit.scan import Inventory
+from audit.rules.payloads import (
+    CredentialFile,
+    CredentialMatrix,
+    Payload,
+    SecretShape,
+    SecretShapes,
+)
 
 #: Committed templates that legitimately hold key *names* without secrets.
 _ENV_TEMPLATE_BASENAMES: frozenset[str] = frozenset({
@@ -70,13 +77,34 @@ _ENV_SHAPE_PROBES: tuple[tuple[str, str], ...] = (
     ("dotenv variant", ".env.local"),
 )
 
+#: Suggested `.gitignore` entry per shape, surfaced in the report so the fix is concrete.
+_SECRET_SHAPE_SUGGEST: dict[str, str] = {
+    "dotenv": ".env",
+    "dotenv variant": ".env.*",
+    "ssh private key": "id_rsa*",
+    "PEM": "*.pem",
+    "key": "*.key",
+    "PKCS#12": "*.p12",
+    "PFX": "*.pfx",
+    "keystore": "*.keystore",
+    "certificate (.crt)": "*.crt",
+    "certificate (.cer)": "*.cer",
+    "AWS credentials": ".aws/*",
+}
+
+_ENV_SHAPE_SUGGEST: dict[str, str] = {
+    "dotenv": ".env",
+    "dotenv variant": ".env.*",
+}
+
 _MAX_SECRET_FILES = 25
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:
@@ -114,6 +142,20 @@ def _shape_coverage(rules: list[IgnoreRule],
     return covered, missing
 
 
+def _shapes_payload(rules: list[IgnoreRule], probes: tuple[tuple[str, str], ...],
+                    suggest: dict[str, str]) -> SecretShapes:
+    covered, missing = _shape_coverage(rules, probes)
+    return SecretShapes(
+        shapes=tuple(
+            SecretShape(label=label, probe=sample, suggested=suggest.get(label, ""),
+                        covered=_path_covered(sample, rules))
+            for label, sample in probes
+        ),
+        covered=tuple(covered),
+        missing=tuple(missing),
+    )
+
+
 # ===========================================================================
 # SEC-01 — .env untracked and ignored
 # ===========================================================================
@@ -122,6 +164,7 @@ def check_sec01(*, spec, target, inventory, stack, components, session) -> Check
     rules = load_ignore_rules(target.path)
     covered, missing = _shape_coverage(rules, _ENV_SHAPE_PROBES)
     ignore_ok = not missing
+    shapes = _shapes_payload(rules, _ENV_SHAPE_PROBES, _ENV_SHAPE_SUGGEST)
 
     tracked = tracked_files(target.path)
     if tracked is None:
@@ -142,10 +185,11 @@ def check_sec01(*, spec, target, inventory, stack, components, session) -> Check
                 path=tracked_env[0],
                 remediation="Untrack the environment file (git rm --cached), add its shape to "
                             ".gitignore, and rotate any value it held."),
-        ])
+        ], data=shapes)
 
     if ignore_ok:
-        return _outcome(spec, Verdict.PASS, "no tracked .env and ignore rules cover the shape")
+        return _outcome(spec, Verdict.PASS, "no tracked .env and ignore rules cover the shape",
+                        data=shapes)
 
     return _outcome(spec, Verdict.PARTIAL,
                     f"no tracked .env, but ignore rules miss {', '.join(missing)}", [
@@ -158,7 +202,7 @@ def check_sec01(*, spec, target, inventory, stack, components, session) -> Check
                       for rule in rules[:8]],
             remediation="Add the .env shape (for example `.env` and `.env.*`) to .gitignore so an "
                         "environment file cannot be committed by accident."),
-    ])
+    ], data=shapes)
 
 
 # ===========================================================================
@@ -231,7 +275,8 @@ def check_sec02(*, spec, target, inventory, stack, components, session) -> Check
 
     if not hits:
         return _outcome(spec, Verdict.PASS,
-                        f"no credential-shaped strings in {source}")
+                        f"no credential-shaped strings in {source}",
+                        data=CredentialMatrix(total=0, source=source))
 
     by_file: dict[str, list[int]] = {}
     for rel, line in hits:
@@ -251,8 +296,15 @@ def check_sec02(*, spec, target, inventory, stack, components, session) -> Check
                         "environment, and rotate the credential. The report never records the "
                         "value itself."))
 
+    matrix = CredentialMatrix(
+        total=len(hits),
+        source=source,
+        files=tuple(
+            CredentialFile(path=rel, lines=tuple(by_file[rel])) for rel in sorted(by_file)
+        ),
+    )
     because = (f"{len(hits)} credential-shaped line(s) across {len(by_file)} file(s) in {source}")
-    return _outcome(spec, Verdict.FAIL, because, findings)
+    return _outcome(spec, Verdict.FAIL, because, findings, data=matrix)
 
 
 # ===========================================================================
@@ -261,6 +313,12 @@ def check_sec02(*, spec, target, inventory, stack, components, session) -> Check
 
 def check_sec03(*, spec, target, inventory, stack, components, session) -> CheckOutcome:
     rules = load_ignore_rules(target.path)
+    no_rules_shapes = SecretShapes(
+        shapes=tuple(SecretShape(label=label, probe=sample,
+                                 suggested=_SECRET_SHAPE_SUGGEST.get(label, ""), covered=False)
+                     for label, sample in _SECRET_SHAPES),
+        missing=tuple(label for label, _sample in _SECRET_SHAPES),
+    )
     if not rules:
         return _outcome(spec, Verdict.FAIL, "no ignore rules exist", [
             Finding(
@@ -269,12 +327,14 @@ def check_sec03(*, spec, target, inventory, stack, components, session) -> Check
                     "rely on the repository to keep secret shapes out",
                     "no .gitignore (or equivalent ignore file) exists"),
                 remediation="Add a .gitignore covering secrets (.env*, *.pem, *.key, *.p12, "
-                            "*.pfx, *.keystore, id_rsa*, *.crt, *.cer, .aws/*).")])
+                            "*.pfx, *.keystore, id_rsa*, *.crt, *.cer, .aws/*).")],
+            data=no_rules_shapes)
 
     covered, missing = _shape_coverage(rules, _SECRET_SHAPES)
+    shapes = _shapes_payload(rules, _SECRET_SHAPES, _SECRET_SHAPE_SUGGEST)
     detail = (f"covered: {', '.join(covered)}" if covered else "no secret shapes covered")
     if not missing:
-        return _outcome(spec, Verdict.PASS, detail)
+        return _outcome(spec, Verdict.PASS, detail, data=shapes)
 
     verdict = Verdict.PARTIAL if covered else Verdict.FAIL
     return _outcome(spec, verdict, f"{detail}; missing: {', '.join(missing)}", [
@@ -287,7 +347,7 @@ def check_sec03(*, spec, target, inventory, stack, components, session) -> Check
             remediation="Add the missing shapes to .gitignore — for example `.env.*`, `*.pem`, "
                         "`*.key`, `*.p12`, `*.pfx`, `*.keystore`, `id_rsa*`, `*.crt`, `*.cer`, "
                         "`.aws/*`."),
-    ])
+    ], data=shapes)
 
 
 IMPLEMENTATIONS = {

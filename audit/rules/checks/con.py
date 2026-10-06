@@ -59,6 +59,7 @@ from audit.findings import Evidence, Finding, Verdict, statement
 from audit.ignore import load_ignore_rules, tracked_files
 from audit.scan import Inventory, Kind
 from audit.target import Target
+from audit.rules.payloads import PathList, Payload
 
 #: Constraint / allow-deny files, matched at the repository root. A documented name set, not a
 #: schema: the framework names no artifact (CON-01), so the pack recognises the common spellings.
@@ -112,14 +113,15 @@ def set_emit_target(out_path: Path | None) -> None:
 # shared helpers
 # ---------------------------------------------------------------------------
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
-def _unknown(spec, reason: str) -> CheckOutcome:
-    return _outcome(spec, Verdict.UNKNOWN, reason)
+def _unknown(spec, reason: str, data: Payload | None = None) -> CheckOutcome:
+    return _outcome(spec, Verdict.UNKNOWN, reason, data=data)
 
 
 def _finding(spec, cannot: str, because: str, verdict: Verdict, evidence: list[Evidence],
@@ -234,6 +236,7 @@ def check_con02(*, spec, target, inventory, stack, components, session) -> Check
 
     listed = _describe(test_roots)
     files = _constraint_files(inventory)
+    paths = PathList(paths=tuple(test_roots))
 
     if files:
         patterns: list[str] = []
@@ -245,7 +248,7 @@ def check_con02(*, spec, target, inventory, stack, components, session) -> Check
         if not uncovered:
             return _outcome(spec, Verdict.PASS,
                             f"constraint file denies the test directories ({listed}): "
-                            f"{', '.join(files)}")
+                            f"{', '.join(files)}", data=paths)
         if covered:
             return _outcome(spec, Verdict.PARTIAL,
                             f"constraint file covers {_describe(covered)} but not "
@@ -253,14 +256,15 @@ def check_con02(*, spec, target, inventory, stack, components, session) -> Check
                 spec, "rely on the deny list to keep test directories out of an agent's reach",
                 f"the constraint file(s) {', '.join(files)} do not deny {_describe(uncovered)}",
                 Verdict.PARTIAL, [Evidence(rel) for rel in files],
-                f"Add {_describe(uncovered)} to the constraint/deny list.")])
+                f"Add {_describe(uncovered)} to the constraint/deny list.")], data=paths)
         return _outcome(spec, Verdict.FAIL,
                         f"a constraint file exists but denies none of the test directories "
                         f"({listed})", [_finding(
             spec, "trust that a failing test is not rewritten to pass",
             f"the constraint file(s) {', '.join(files)} do not deny any test directory",
             Verdict.FAIL, [Evidence(rel) for rel in files],
-            f"Add {listed} to the constraint/deny list so test edits are bounded and reviewed.")])
+            f"Add {listed} to the constraint/deny list so test edits are bounded and reviewed.")],
+                        data=paths)
 
     rules = load_ignore_rules(target.path)
     rule_patterns = [rule.pattern for rule in rules]
@@ -282,10 +286,11 @@ def check_con02(*, spec, target, inventory, stack, components, session) -> Check
             f"no constraint file exists; protection is indirect ({'; '.join(mechanisms)})",
             Verdict.PARTIAL,
             [Evidence(ci[0] if ci else (rules[0].source if rules else "<repository>"))],
-            "Add a constraint/allow-deny file that names the test directories explicitly.")])
+            "Add a constraint/allow-deny file that names the test directories explicitly.")],
+                        data=paths)
 
     return _unknown(spec, f"no constraint file protects the test directories ({listed}), and no "
-                          f"ignore rule or CI guard does either")
+                          f"ignore rule or CI guard does either", data=paths)
 
 
 # ===========================================================================

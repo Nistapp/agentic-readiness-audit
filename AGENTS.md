@@ -55,8 +55,12 @@ Agents MUST respect the following structural rules.
 | `audit/findings.py` | Severity ordering, the finding model, the "An agent cannot X because Y" sentence form. |
 | `audit/rules/registry.py` | The check catalogue, framework anchors, `ruleset_hash()`. |
 | `audit/rules/variants.py` | **The** instruction-variant table — one data structure, in code. |
+| `audit/rules/payloads.py` | Typed, `kind`-discriminated structured check payloads (ADR-0007). |
 | `audit/rules/checks/` | One module per check pack; each exposes an `IMPLEMENTATIONS` dict. |
-| `audit/report/` | JSON and Markdown writers. |
+| `audit/report/model.py` | **The** schema-v2 report model — the JSON render contract (ADR-0007). |
+| `audit/report/presentation.py` | The Markdown template (sections, columns, editorial wording), in code. |
+| `audit/report/md_render.py` | Generic section/table renderer over the report dict. |
+| `audit/report/json_writer.py`, `audit/report/md_writer.py` | Thin file-facing writers over the model. |
 | `tools/build.py` | Zipapp builder producing `dist/audit.pyz`. |
 | `tests/` | Stdlib `unittest` suite and fixtures. |
 

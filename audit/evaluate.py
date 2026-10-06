@@ -19,6 +19,7 @@ from audit import __ruleset_revision__, __version__
 from audit.components import ComponentModel, detect_components
 from audit.findings import Finding, Severity, Verdict
 from audit.probes import ProbeSession
+from audit.rules.payloads import Payload
 from audit.scan import Inventory
 from audit.stack import Stack
 from audit.target import Target
@@ -53,7 +54,8 @@ class CheckOutcome:
     phase: int
     verdict: Verdict
     status: str                     # implemented | planned | blocked
-    detail: str = ""
+    summary: str = ""               # one short human sentence (the appendix headline)
+    data: Payload | None = None     # typed structured facts; renderer dispatches on .kind
     findings: list[Finding] = field(default_factory=list)
 
 

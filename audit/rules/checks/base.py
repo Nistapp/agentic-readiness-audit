@@ -53,6 +53,7 @@ from audit.findings import Evidence, Finding, Verdict, statement
 from audit.rules.checks._common import resolve_verbs
 from audit.scan import Inventory
 from audit.stack import CI_PROVIDERS
+from audit.rules.payloads import Payload
 
 #: Baseline / suppression artifacts, matched by name at any depth. A `*baseline*` name is treated as
 #: a baseline wherever it sits; this is a documented name set, not a content assertion.
@@ -124,10 +125,11 @@ _COVERAGE_PROSE_RE = re.compile(
 )
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:

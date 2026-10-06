@@ -52,6 +52,7 @@ from urllib.parse import quote
 
 from audit.evaluate import CheckOutcome
 from audit.findings import Evidence, Finding, Verdict, statement
+from audit.rules.payloads import Payload
 
 #: The server this pack checks for, matched as a literal in configuration text.
 SERVER_NAME = "codebase-memory-mcp"
@@ -76,10 +77,11 @@ _GIT_COLUMN_RE = re.compile(r"(?i)(?:git[_ -]?sha|sha[_ -]?git|revision|commit)"
 _READ_LIMIT = 256 * 1024
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:

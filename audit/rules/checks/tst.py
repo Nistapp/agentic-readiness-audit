@@ -57,6 +57,7 @@ from audit.probes import ProbePlan
 from audit.rules.checks._common import extract_fenced_commands, resolve_verbs
 from audit.scan import Kind
 from audit.stack import extract_npm_scripts
+from audit.rules.payloads import Counter, Payload
 
 #: Suffixes a *test source* file can carry. A file classified ``Kind.TEST`` by a directory hint
 #: (``test/``, ``tests/``) but carrying another suffix (``.json``) is configuration, not a test.
@@ -142,10 +143,11 @@ _MARKER_PATTERNS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:
@@ -285,7 +287,9 @@ def check_tst03(*, spec, target, inventory, stack, components, session) -> Check
     breakdown = ", ".join(f"{family} {count}" for family, count in sorted(counts.items()))
     detail = (f"skip/xfail census across {readable} test file(s): "
               f"{breakdown or 'no markers'}; total {total}")
-    return _outcome(spec, Verdict.PASS, detail)
+    return _outcome(spec, Verdict.PASS, detail,
+                    data=Counter(value=total, unit="skip/xfail markers",
+                                 breakdown=dict(sorted(counts.items()))))
 
 
 # ===========================================================================

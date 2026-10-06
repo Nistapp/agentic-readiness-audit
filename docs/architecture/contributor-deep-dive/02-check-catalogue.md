@@ -225,8 +225,11 @@ suspicious verdict.
 2. State tier, phase anchor, severity, and a **falsifiable** evidence rule — one that a reviewer can apply to a
    fixture and reach the same verdict.
 3. Add the failure mode to [Why These Checks](../user-overview/03-why-these-checks.md). No failure mode, no check.
-4. Add a broken fixture that fails exactly this check and nothing else.
-5. Add the row to the summary table and to the pack's framework anchor before merging.
+4. Emit a short human `summary` and, where the check has table-shaped facts, a typed `data` payload from
+   `audit/rules/payloads.py` (ADR-0007). The renderer builds check tables from the payload `kind`, never
+   from prose, and editorial wording belongs in `audit/report/presentation.py`, not in the check.
+5. Add a broken fixture that fails exactly this check and nothing else.
+6. Add the row to the summary table and to the pack's framework anchor before merging.
 
 ---
 

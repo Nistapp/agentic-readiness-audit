@@ -47,6 +47,7 @@ from audit.rules.checks._common import (
     runner_commands,
 )
 from audit.stack import VERBS
+from audit.rules.payloads import Payload, VerbEntry, VerbSurface
 
 #: The three read-only concerns a `check` gate must compose, in catalogue order.
 CONCERNS = ("format-check", "typecheck", "test")
@@ -118,10 +119,11 @@ _WRITER_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:
@@ -172,6 +174,20 @@ def check_cmd01(*, spec, target, inventory, stack, components, session) -> Check
         f"{verb} -> {resolved[verb].runner}" if verb in resolved else f"{verb} -> missing"
         for verb in VERBS)
 
+    surface = VerbSurface(
+        verbs=tuple(
+            VerbEntry(
+                verb=verb,
+                resolved=verb in resolved,
+                runner=resolved[verb].runner if verb in resolved else None,
+                command=resolved[verb].command if verb in resolved else None,
+            )
+            for verb in VERBS
+        ),
+        resolved_count=len(resolved),
+        missing=tuple(missing),
+    )
+
     if missing:
         return _outcome(spec, Verdict.FAIL, detail, [Finding(
             check=spec.id, severity=spec.severity, phase=spec.phase, verdict=Verdict.FAIL,
@@ -181,7 +197,8 @@ def check_cmd01(*, spec, target, inventory, stack, components, session) -> Check
                 f"({', '.join(missing)})"),
             evidence=[Evidence(runner) for runner, _cmds in declared],
             remediation="Define every verb (format, format:check, lint, typecheck, test, check, "
-                        "security) as a script/target so an agent never has to invent a command.")])
+                        "security) as a script/target so an agent never has to invent a command.")],
+            data=surface)
 
     if len(runners_used) > 1:
         return _outcome(spec, Verdict.PARTIAL, detail, [Finding(
@@ -192,9 +209,9 @@ def check_cmd01(*, spec, target, inventory, stack, components, session) -> Check
                 f"({', '.join(runners_used)}), so no single runner is the contract"),
             evidence=[Evidence(resolved[verb].runner, note=verb) for verb in VERBS],
             remediation="Keep one runner as the authority for all verbs; reduce any second runner "
-                        "to a delegation (see CMD-03).")])
+                        "to a delegation (see CMD-03).")], data=surface)
 
-    return _outcome(spec, Verdict.PASS, detail)
+    return _outcome(spec, Verdict.PASS, detail, data=surface)
 
 
 # ===========================================================================

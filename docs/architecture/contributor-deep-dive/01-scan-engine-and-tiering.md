@@ -163,29 +163,55 @@ Same target, same commit, same flags → byte-identical report except the proven
 
 ## 8. Report Shape (JSON)
 
+Schema v2. The JSON is the **render contract**: the Markdown report is a pure function of this dict
+(ADR-0007). `audit/report/model.py` is the single definition of the shape; both writers consume it.
+
 ```jsonc
 {
+  "schema_version": "2",
   "provenance": {
     "tool": "python-agentic-audit", "version": "0.1.0",
-    "framework_revision": "<git sha>", "ruleset_hash": "<sha256>",
-    "target": "/abs/path", "git_sha": "<sha>", "git_dirty": true,
-    "generated_at": "<iso8601>"          // the only non-deterministic field
+    "framework_revision": "<git sha>", "ruleset_hash": "<16 hex>",
+    "target": "/abs/path", "git_sha": "<sha>", "git_branch": "<branch>", "git_dirty": true,
+    "scanned_at": "<iso8601>"            // the only non-deterministic field
   },
   "summary": { "phase1_score": 0.0, "blockers": 0, "degraders": 0, "cosmetic": 0,
-               "checks": { "pass": 0, "partial": 0, "fail": 0, "unknown": 0, "attest": 0 } },
-  "components": [ { "path": "packages/api", "declared": true, "agents_md": "missing" } ],
+               "checks": { "pass": 0, "partial": 0, "fail": 0, "unknown": 0, "attest": 0 },
+               "checks_implemented": 0, "checks_scoreable": 0, "checks_applicable": 0,
+               "coverage_note": "…" },
+  "checks": [ { "id": "CMD-01", "pack": "CMD", "title": "Six verbs resolvable on one runner",
+                "tier": "B", "severity": "BLOCKER", "phase": 1, "scored": true,
+                "status": "implemented", "verdict": "FAIL",
+                "summary": "<one short sentence for the appendix>",
+                "data": { "kind": "verb_surface", "verbs": [ /* … */ ] } } ],
+  "components": [ { "name": "(root)", "path": ".", "declared": true, "declared_by": "implicit",
+                    "manifest": "package.json", "agents_md": "present" } ],
+  "candidate_components": [],
+  "stack": { "ecosystems": [], "package_managers": [], "ci_providers": [],
+             "test_frameworks": [], "hook_managers": [], "notes": [] },
+  "inventory": { "files_inspected": 0, "files_skipped": 0, "truncated": false },
   "findings": [ { "id": "EXEC-02:packages/api", "check": "EXEC-02", "phase": 1,
                   "severity": "BLOCKER", "verdict": "FAIL",
-                  "evidence": [ { "path": "packages/api/package.json", "line": 1 } ],
+                  "evidence": [ { "path": "packages/api/package.json", "line": 1, "note": null } ],
                   "statement": "An agent cannot install reproducibly because no lockfile is committed.",
                   "remediation": "Commit the lockfile and switch CI to the frozen-install command." } ],
   "unattested": [ "index-in-use", "baseline-adequacy", "suite-trustworthiness", "doc-accuracy", "gate-honoured" ],
-  "not_applicable": [ "EXEC-01" ]
+  "not_applicable": [ "EXEC-01" ],
+  "probes": [ { "verb": "test", "command": ["jest"], "exit_code": null, "timed_out": false,
+                "duration_s": 0.0, "refused_reason": "probes disabled (pass --run-gates)",
+                "redactions": 0, "output_tail": "" } ],
+  "ratchet": { "baseline": "<path>", "regressions": [] }   // only with --baseline
 }
 ```
 
-Every finding carries a one-sentence **statement** in the form *"An agent cannot X because Y."* That sentence is
-what makes the JSON usable as a work queue without a human reading the check catalogue.
+Every finding carries a one-sentence **statement** in the form *"An agent cannot X because Y."* That
+sentence is what makes the JSON usable as a work queue without a human reading the check catalogue.
+
+Every check additionally carries a short human **`summary`** and a structured **`data`** payload.
+The payload is a `kind`-discriminated object (`audit/rules/payloads.py`): the renderer switches on
+`kind` to build a check-specific table and never parses prose. A check with no table of its own
+carries `data: {}` and relies on `summary`. The payload kinds are `verb_surface`, `credential_matrix`,
+`secret_shapes`, `env_keys`, `harness_matrix`, `ratio`, `counter`, `path_list` and `mapping`.
 
 ---
 

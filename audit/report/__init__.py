@@ -54,13 +54,13 @@ def resolve_out_path(args: argparse.Namespace, target_path: Path) -> Path:
 
 
 def emit(result: AuditResult, *, args: argparse.Namespace) -> None:
-    from audit.report.json_writer import render_json
-    from audit.report.md_writer import render_markdown
+    from audit.report.model import build_report
+    from audit.report.md_render import render_markdown
 
-    payload: dict | str | None = None
-    if args.format in ("json", "both"):
-        payload = render_json(result, args)
-    markdown = render_markdown(result, args) if args.format in ("md", "both") else None
+    # One model, two artifacts: the JSON and the Markdown are rendered from the *same* dict, so they
+    # cannot drift. The dict is built even for `--format md` (in memory, never written).
+    payload = build_report(result, args) if args.format in ("json", "both", "md") else None
+    markdown = render_markdown(payload) if payload is not None and args.format in ("md", "both") else None
 
     out_path = _resolve_out(args, result.target.path)
     if out_path.exists() and not args.force and args.format != "md":
@@ -70,7 +70,7 @@ def emit(result: AuditResult, *, args: argparse.Namespace) -> None:
         if args.format == "md" or markdown and not args.out:
             print(markdown)
 
-    if payload is not None:
+    if payload is not None and args.format in ("json", "both"):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         import json
 

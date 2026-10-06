@@ -44,6 +44,7 @@ from audit.evaluate import CheckOutcome
 from audit.findings import Evidence, Finding, Verdict, statement
 from audit.rules.checks._common import resolve_verbs, runner_commands
 from audit.stack import extract_npm_scripts
+from audit.rules.payloads import Payload
 
 #: Formatter configuration filenames, across the ecosystems the catalogue names.
 _FORMATTER_CONFIG_NAMES: tuple[str, ...] = (
@@ -91,10 +92,11 @@ _AUDIT_PATTERNS: tuple[re.Pattern[str], ...] = tuple(re.compile(p) for p in (
 ))
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _unknown(spec, reason: str) -> CheckOutcome:

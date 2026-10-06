@@ -12,6 +12,7 @@
 | [0004](adrs/0004-no-llm-in-v1.md) | No LLM Calls in v1 | Accepted | 2026-09-28 |
 | [0005](adrs/0005-module-layout-and-zipapp-distribution.md) | Module Layout and Zipapp Distribution | Accepted | 2026-09-28 |
 | [0006](adrs/0006-private-check-helpers-and-ignore-engine.md) | Private Check Helpers and the Ignore Engine | Accepted | 2026-09-28 |
+| [0007](adrs/0007-json-report-render-contract.md) | The JSON Report Is the Render Contract; the Markdown Is a Template Over It | Accepted | 2026-09-30 |
 
 ## Key Documents
 

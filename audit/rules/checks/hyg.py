@@ -50,6 +50,7 @@ from pathlib import Path
 from audit.evaluate import CheckOutcome
 from audit.findings import Evidence, Finding, Verdict, statement
 from audit.scan import Inventory
+from audit.rules.payloads import Payload
 
 #: A README below this many characters of trimmed text is present but not documentation.
 MIN_README_CHARS = 200
@@ -73,10 +74,11 @@ _DEPENDENCY_AUTOMATION = (
 )
 
 
-def _outcome(spec, verdict: Verdict, detail: str = "",
-             findings: list[Finding] | None = None) -> CheckOutcome:
+def _outcome(spec, verdict: Verdict, summary: str = "",
+             findings: list[Finding] | None = None,
+             data: Payload | None = None) -> CheckOutcome:
     return CheckOutcome(spec.id, spec.title, spec.tier, spec.severity, spec.phase, verdict,
-                        spec.status, detail=detail, findings=findings or [])
+                        spec.status, summary=summary, data=data, findings=findings or [])
 
 
 def _finding(spec, verdict: Verdict, cannot: str, because: str, *,
