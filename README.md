@@ -53,6 +53,20 @@ Full walkthrough: [How to run an audit](docs/how-to/run-an-audit.md).
 
 ---
 
+## Examples
+
+A real report, produced by this tool against a pre-existing repository (`v1`…`v3` packages on the
+project side). The Markdown is a pure function of the JSON ([ADR-0007](docs/architecture/adrs/0007-json-report-render-contract.md)),
+so the two always describe the same run.
+
+| Example | Files |
+|---|---|
+| Digital-Assistant-SDK | [audit-report.md](examples/digital-assistant-sdk/audit-report.md) · [audit-report.json](examples/digital-assistant-sdk/audit-report.json) |
+
+How to read it: [Read the report](docs/how-to/read-the-report.md).
+
+---
+
 ## Layout
 
 ```
@@ -70,10 +84,11 @@ audit/                     the tool: standard library only, no install step
     variants.py            THE instruction-variant table (one data structure, in code)
     registry.py            check catalogue + framework anchors + ruleset hash
     checks/                one module per check family; idx.py, agt.py, execution.py, cmd.py, sec.py, doc.py, nav.py, tool.py, ci.py, tst.py, base.py, con.py and hyg.py are implemented
-  report/                  JSON and Markdown writers
+  report/                  report model (schema v2), Markdown template, writers
 tools/build.py             python3 tools/build.py  ->  dist/audit.pyz
 tests/                     stdlib unittest suite + fixtures
 docs/                      the design of record, and the source of the doc-link checker
+examples/                  real audit reports rendered by this tool
 ```
 
 Running the tool needs nothing installed. Building the single-file distributable needs nothing but Python, and
